@@ -1,28 +1,21 @@
-import inspect
-from typing import Type
+from typing import Type, Union
 
 from rest_access_policy import AccessPolicy
-from rest_framework.response import Response
 
 
 class AccessViewSetMixin(object):
-    access_policy: Type[AccessPolicy]
+    access_policy: Union[AccessPolicy, Type[AccessPolicy]] = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if not (isinstance(self.access_policy, AccessPolicy)
+                or isinstance(self.access_policy, type) and issubclass(self.access_policy, AccessPolicy)):
+            raise ValueError(f"{self.__class__.__name__}.access_policy must be an AccessPolicy or subclass")
 
-        access_policy = getattr(self, "access_policy", None)
-
-        if not inspect.isclass(access_policy) or not issubclass(access_policy, AccessPolicy):
-            raise Exception(
-                """
-                    When mixing AccessViewSetMixin into your view set, you must assign an AccessPolicy 
-                    to the access_policy class attribute.
-                """
-            )
-
-        self.permission_classes = [self.access_policy] + self.permission_classes
-
-    def finalize_response(self, request, response, *args, **kwargs) -> Response:
-        response = super().finalize_response(request, response, *args, **kwargs)
-        return response
+    def get_permissions(self):
+        """
+        Inject access policy to view's permissions
+        :return: List of permission objects
+        """
+        access_policy = self.access_policy if isinstance(self.access_policy, AccessPolicy) else self.access_policy()
+        return [access_policy, *super().get_permissions()]

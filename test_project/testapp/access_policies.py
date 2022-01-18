@@ -1,23 +1,30 @@
+from django.db.models import Q
+
 from rest_access_policy import AccessPolicy
 
 
-class UserAccountAccessPolicy(AccessPolicy):
+class ArticleAccessPolicy(AccessPolicy):
     statements = [
-        {"principal": "group:admin", "action": ["create", "update"], "effect": "allow"},
-        {
-            "principal": "group:dev",
-            "action": ["update", "partial_update"],
-            "effect": "allow",
-        },
-        {"principal": "group:banned", "action": "retrieve", "effect": "deny"},
-        {
-            "principal": "group:regular_users",
-            "action": "set_password",
-            "effect": "allow",
-        },
+        {"principal": "*", "action": "<safe_methods>"},
+        {"principal": "group:editors", "action": "publish", "effect": "allow"},
+        {"principal": "authenticated", "action": "*", "condition": "user_must_be:author", "effect": "allow"},
+        {"principal": "admin", "action": "*", "effect": "allow"},
     ]
+    field_permissions = {
+        "read_only": [
+            {"principal": "*", "fields": ["author", "published_at", "published_by", "created", "modified"]},
+            {"principal": "admin", "fields": "published_by", "effect": "allow"},
+        ],
+    }
 
-    field_permissions = {"read_only": [{"principal": "group:dev", "fields": "status"}]}
+    @classmethod
+    def scope_queryset(cls, request, qs):
+        if not request.user.is_authenticated:
+            return qs.filter(published_at__isnull=False)
+        elif not request.user.groups.filter(name="editors").exists():
+            return qs.filter(Q(author=request.user) | Q(published_at__isnull=False))
+        else:
+            return qs
 
 
 class LogsAccessPolicy(AccessPolicy):

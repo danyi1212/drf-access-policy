@@ -33,13 +33,14 @@ nav:
   - Intro: index.md
   - Usage - ViewSets: usage/view_set_usage.md
   - Usage - Function-Based Views: usage/function_based_view_usage.md
+  - Usage - Serializer Field Permissions: usage/field_permissions.md
   - Statement Elements: statement_elements.md
   - Policy Evaluation Logic: policy_logic.md
-  - Custom/Object-Level Conditions: object_level_permissions.md
+  - Custom / Object-Level Conditions: object_level_permissions.md
   - ViewSet Mixin: view_set_mixin.md
   - Reuse Conditions/Permissions: reusable_conditions.md
   - Loading External Statements: loading_external_source.md
-  - Multitenancy/Scoping QuerySets: multi_tenacy.md
+  - Multitenancy / Scoping QuerySets: multi_tenacy.md
   - Customizing: customization.md
   - Migrating: migration_notes.md
   - License: license.md

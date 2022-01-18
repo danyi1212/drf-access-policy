@@ -1,3 +1,5 @@
+from typing import Callable
+
 from pyparsing import Keyword, Word, alphanums
 
 
@@ -7,8 +9,12 @@ class ConditionOperand(object):
         self.label = t[0]
         self.check_condition_fn = check_cond_fn
 
-        assert self.check_condition_fn is not None, 'The check_condition_fn should should be set'
-        assert callable(self.check_condition_fn), 'The check_condition_fn should should be callable'
+        if self.check_condition_fn is None:
+            raise ValueError("ConditionOperand must receive \"check_condition_fn\" argument")
+
+        if not callable(self.check_condition_fn):
+            raise ValueError(f"ConditionOperand.check_condition_fn must be a function "
+                             f"(not {type(self.check_condition_fn)}")
 
     def __bool__(self):
         return self.check_condition_fn(self.label)
@@ -21,28 +27,31 @@ class ConditionOperand(object):
 
 
 class BoolBinOp(object):
+    repr_symbol: str
+    eval_op: Callable
+
     def __init__(self, t):
         self.args = t[0][0::2]
 
     def __str__(self):
-        sep = " %s " % self.reprsymbol
+        sep = " %s " % self.repr_symbol
         return "(" + sep.join(map(str, self.args)) + ")"
 
     def __bool__(self):
-        return self.evalop(bool(a) for a in self.args)
+        return self.eval_op(bool(a) for a in self.args)
 
     __nonzero__ = __bool__
     __repr__ = __str__
 
 
 class BoolAnd(BoolBinOp):
-    reprsymbol = '&'
-    evalop = all
+    repr_symbol = '&'
+    eval_op = all
 
 
 class BoolOr(BoolBinOp):
-    reprsymbol = '|'
-    evalop = any
+    repr_symbol = '|'
+    eval_op = any
 
 
 class BoolNot(object):

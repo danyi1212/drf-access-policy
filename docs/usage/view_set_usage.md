@@ -1,13 +1,13 @@
 # Policy for ViewSet
 
-A policy is comprised of "statements" that declare what "actions" a "principal" can or cannot perform on the resource, with optional custom checks that can examine any detail of the current request.
+Policy contains "statements" that declare what "actions" a "principal" can or cannot perform on the resource, 
+with optional conditions that can examine any detail of the current request.
 
 Two key points to remember going forward:
+* All access is implicitly denied by default.
+* Any statement with the "deny" effect overrides any and all "allow" statement.
 
-- all access is implicitly denied by default
-- any statement with the "deny" effect overrides any and all "allow" statement
-
-Let's look at the policy below, which is for an articles endpoint exposed through a `ViewSet`.
+Let's look at the policy below, which is for an articles' endpoint exposed through a `ViewSet`.
 
 ```python hl_lines="9"
 class ArticleAccessPolicy(AccessPolicy):
