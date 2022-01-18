@@ -1,7 +1,14 @@
 import re
 from abc import ABC
 from dataclasses import dataclass
-from typing import Union, Sequence, Literal, TYPE_CHECKING, Set
+from typing import Union, Sequence, TYPE_CHECKING, Set
+try:
+    # support for python pre 3.8
+    from typing import Literal
+    EffectTypeHint = Literal["allow", "deny"]
+except ImportError:
+    EffectTypeHint = str
+
 
 from django.contrib.auth.models import AnonymousUser
 
@@ -65,7 +72,7 @@ class Statement(BaseStatement):
     Access Statement for determining permission to view
     """
     action: Union[str, Sequence[str]]
-    effect: Literal["allow", "deny"] = None
+    effect: EffectTypeHint = None
     condition: Union[str, Sequence[str]] = None
     condition_expression: Union[str, Sequence[str]] = None
 
@@ -137,7 +144,7 @@ class FieldStatement(BaseStatement):
     Field Statement for modifying serializer fields.
     """
     fields: Union[str, Sequence[str]]
-    effect: Literal["allow", "deny"] = None
+    effect: EffectTypeHint = None
 
     @classmethod
     def from_dict(cls, statement: dict) -> "FieldStatement":

@@ -139,7 +139,8 @@ class ConditionTests(TestCase):
         with self.assertRaises(TypeError) as context:
             self.call_condition("simple_condition:test")
 
-        self.assertEqual("simple_condition() takes 4 positional arguments but 5 were given", str(context.exception))
+        self.assertTrue("4 positional arguments but 5 were given" in str(context.exception))
+        self.assertTrue("simple_condition()" in str(context.exception))
 
     def test_condition_raise_exception(self):
         with self.assertRaises(ValueError) as context:
