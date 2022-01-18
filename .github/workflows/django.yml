@@ -57,7 +57,6 @@ jobs:
         run: python -m pip install "djangorestframework~=${{ matrix.drf-version }}.0"
 
       - name: Install Dependencies
-        working-directory: ./testproj
         run: python -m pip install -r requirements-github.txt
 
       - name: Python and Django versions
