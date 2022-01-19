@@ -1,6 +1,5 @@
 from functools import wraps
 from typing import List
-from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import Group, User
 from django.test import override_settings
@@ -9,7 +8,6 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from test_project.global_access_conditions import user_must_be
 from test_project.testapp.models import Article
 
 
@@ -49,13 +47,13 @@ class ArticleViewSetTests(APITestCase):
     @for_each_view()
     def test_create_as_anonymous(self, view_path):
         response = self.client.post(reverse(f"{view_path}-list"), {})
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.data)
 
     @for_each_view()
     def test_list_as_anonymous(self, view_path):
         # Tests scope_query
         response = self.client.get(reverse(f"{view_path}-list"))
-        self.assertEquals(response.status_code, status.HTTP_200_OK, msg=response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
         self.assertEqual(len(response.data), 10)
 
     @for_each_view()
@@ -63,7 +61,7 @@ class ArticleViewSetTests(APITestCase):
         # Tests scope_query
         self.client.force_login(self.user)
         response = self.client.get(reverse(f"{view_path}-list"))
-        self.assertEquals(response.status_code, status.HTTP_200_OK, msg=response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
         self.assertEqual(len(response.data), 20)
 
     @for_each_view()
@@ -71,44 +69,44 @@ class ArticleViewSetTests(APITestCase):
         # Tests scope_query
         self.client.force_login(self.editor)
         response = self.client.get(reverse(f"{view_path}-list"))
-        self.assertEquals(response.status_code, status.HTTP_200_OK, msg=response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
         self.assertEqual(len(response.data), 30)
 
     @for_each_view()
     def test_edit_as_user(self, view_path):
         self.client.force_login(self.user)
         response = self.client.patch(reverse(f"{view_path}-detail", kwargs=dict(pk=2)), {"title": "Hi mom."})
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN, msg=response)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response)
 
     @for_each_view()
     def test_edit_as_author(self, view_path):
         self.client.force_login(self.user)
         response = self.client.patch(reverse(f"{view_path}-detail", kwargs=dict(pk=1)), {"title": "Hi mom."})
-        self.assertEquals(response.status_code, status.HTTP_200_OK, msg=response)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response)
 
     @for_each_view()
     def test_edit_as_editor(self, view_path):
         self.client.force_login(self.editor)
         response = self.client.patch(reverse(f"{view_path}-detail", kwargs=dict(pk=1)), {"title": "Hi mom."})
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.data)
 
     @for_each_view()
     def test_publish_as_user(self, view_path):
         self.client.force_login(self.user)
         response = self.client.post(reverse(f"{view_path}-publish", kwargs=dict(pk=2)), {})
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN, msg=response)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response)
 
     @for_each_view()
     def test_publish_as_author(self, view_path):
         self.client.force_login(self.user)
         response = self.client.post(reverse(f"{view_path}-publish", kwargs=dict(pk=1)), {})
-        self.assertEquals(response.status_code, status.HTTP_200_OK, msg=response)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response)
 
     @for_each_view()
     def test_publish_as_editor(self, view_path):
         self.client.force_login(self.editor)
         response = self.client.post(reverse(f"{view_path}-publish", kwargs=dict(pk=1)), {})
-        self.assertEquals(response.status_code, status.HTTP_200_OK, msg=response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
 
     @for_each_view()
     def test_create_article(self, view_path):
@@ -117,7 +115,7 @@ class ArticleViewSetTests(APITestCase):
             "title": "My Article",
             "body": "Hello World!",
         }, format="json")
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED, msg=response.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.data)
 
     @for_each_view()
     def test_create_article_read_only_fields(self, view_path):
@@ -127,9 +125,9 @@ class ArticleViewSetTests(APITestCase):
             "body": "Hello World!",
             "published_by": self.user.pk,
         }, format="json")
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED, msg=response.data)
-        self.assertNotEquals(response.data.get("published_by"), self.user.pk)
-        self.assertEquals(response.data.get("published_by"), None)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.data)
+        self.assertNotEqual(response.data.get("published_by"), self.user.pk)
+        self.assertEqual(response.data.get("published_by"), None)
 
     @for_each_view()
     def test_create_article_read_only_fields_admin(self, view_path):
@@ -139,6 +137,6 @@ class ArticleViewSetTests(APITestCase):
             "body": "Hello World!",
             "published_by": self.user.pk,
         }, format="json")
-        self.assertEquals(response.status_code, status.HTTP_201_CREATED, msg=response.data)
-        self.assertEquals(response.data.get("published_by"), self.user.pk)
-        self.assertNotEquals(response.data.get("published_by"), None)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.data)
+        self.assertEqual(response.data.get("published_by"), self.user.pk)
+        self.assertNotEqual(response.data.get("published_by"), None)

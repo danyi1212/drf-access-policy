@@ -1,3 +1,4 @@
+# pylint: disable=attribute-defined-outside-init
 from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import User, Group
@@ -41,7 +42,7 @@ class UtilsTests(TestCase):
 class ReusableConditionTests(TestCase):
 
     def tearDown(self):
-        super(ReusableConditionTests, self).tearDown()
+        super().tearDown()
         get_reusable_condition.cache_clear()
 
     @override_settings(DRF_ACCESS_POLICY={"reusable_conditions": "test_project.global_access_conditions"})
@@ -153,7 +154,7 @@ class ConditionTests(TestCase):
     def test_condition_in_reusable_module(self, mock: MagicMock):
         self.call_condition("is_a_cat:Garfield")
         mock.assert_called_once_with(self.request, self.view, self.action, "Garfield")
-    
+
     def test_condition_expression_and(self):
         result = self.call_condition_expression("is_true and is_false")
         self.assertEqual(result, False)

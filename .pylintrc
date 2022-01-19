@@ -1,0 +1,16 @@
+[MASTER]
+ignore=static,templates
+ignore-patterns=.+\.md, .+\.txt, .+\.ini,
+load-plugins = pylint_django, pylint_django.checkers.migrations, pylint.extensions.docparams, pylint.extensions.docstyle,
+               pylint.extensions.confusing_elif, pylint.extensions.for_any_all, pylint.extensions.bad_builtin
+disable=missing-module-docstring, missing-class-docstring, missing-type-doc, docstring-first-line-empty,
+        trailing-comma-tuple, no-else-return, too-few-public-methods
+
+[BASIC]
+good-names=default_app_config,logger,id,pk
+
+[TYPECHECK]
+ignored-classes=WSGIRequest
+
+[FORMAT]
+max-line-length=120

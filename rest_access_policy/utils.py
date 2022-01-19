@@ -1,7 +1,7 @@
-import re
+# pylint: disable=broad-except
 from functools import lru_cache, wraps
 from importlib import import_module
-from typing import Optional, Callable, TYPE_CHECKING, Set, Sequence
+from typing import Optional, Callable, TYPE_CHECKING
 
 from django.conf import settings
 from pyparsing import infixNotation, opAssoc
@@ -34,6 +34,8 @@ def get_reusable_condition(method_name: str) -> Optional[Callable]:
         if hasattr(module, method_name) and callable(getattr(module, method_name)):
             return getattr(module, method_name)
 
+    return None
+
 
 def get_condition_method(policy: "AccessPolicy", method_name: str) -> Callable:
     """
@@ -42,6 +44,7 @@ def get_condition_method(policy: "AccessPolicy", method_name: str) -> Callable:
     :param policy: Access Policy object
     :param method_name: Name of condition method
     :return: Condition Function
+    :raise AccessPolicyException: Unable to find condition method
     """
     if hasattr(policy, method_name) and callable(getattr(policy, method_name)):
         return getattr(policy, method_name)
@@ -66,6 +69,7 @@ def check_condition(policy: "AccessPolicy", condition: str, request, view, actio
     :param view: Policy view
     :param action: View action
     :return: Condition method result (True if matched)
+    :raise AccessPolicyException: Condition method did not return boolean.
     """
     parts = condition.split(":", 1)
     method_name = parts[0]
@@ -77,13 +81,13 @@ def check_condition(policy: "AccessPolicy", condition: str, request, view, actio
     else:
         result = method(request, view, action)
 
-    if isinstance(result, bool):
-        return result
-    else:
+    if not isinstance(result, bool):
         raise AccessPolicyException(
             f"Received invalid value \"{result}\" (type {type(result)}) from condition \"{condition}\". "
             f"Conditions must return a boolean value (True/False)."
         )
+
+    return result
 
 
 def check_condition_expression(policy, condition: str, request, view, action: str) -> bool:
@@ -146,10 +150,10 @@ def object_level_condition(default=False, raise_exception=False):
         def wrapper(request, view, action, *args) -> bool:
             try:
                 obj = view.get_object()
-            except Exception as e:
+            except Exception as exc:
                 obj = default
                 if raise_exception:
-                    raise e
+                    raise exc
 
             return func(request, view, action, obj, *args)
 

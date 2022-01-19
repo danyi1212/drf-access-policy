@@ -69,3 +69,18 @@ jobs:
 
       - name: Run Tests
         run: python manage.py test
+
+  pylint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Upgrade pip version
+        run: python -m pip install -U pip
+      - name: Install dependencies
+        run: pip install pylint pylint-django django djangorestframework -r requirements-github.txt
+      - name: Analysing drf_messages with pylint
+        run: pylint rest_access_policy --django-settings-module=test_project.settings
+      - name: Analysing test project with pylint
+        run: pylint test_project --rcfile .pylintrc-test-project --django-settings-module=test_project.settings

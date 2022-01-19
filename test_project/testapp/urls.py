@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from test_project.testapp.views import delete_logs, get_logs, get_landing_page, ArticleViewSet, ArticleViewSetWithMixin

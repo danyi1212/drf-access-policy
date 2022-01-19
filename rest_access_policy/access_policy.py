@@ -1,3 +1,4 @@
+# pylint: disable=protected-access, no-self-use, unused-argument
 from dataclasses import dataclass
 from inspect import isclass
 from typing import Union, Sequence, Iterator, List, Dict, Type

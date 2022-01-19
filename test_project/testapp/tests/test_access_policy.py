@@ -1,13 +1,13 @@
+# pylint: disable=protected-access
 from typing import List
 from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import Group, User
 from django.test import TestCase
 
-from rest_access_policy import AccessPolicy
-from rest_access_policy.access_policy import AccessEnforcement
+from rest_access_policy.access_policy import AccessPolicy, AccessEnforcement
 from rest_access_policy.statements import Statement
-from test_project.testapp.tests.utils import FakeRequest, FakeViewSet, TestPolicy
+from test_project.testapp.tests.utils import FakeRequest, FakeViewSet
 
 
 class PolicyEvaluationTests(TestCase):

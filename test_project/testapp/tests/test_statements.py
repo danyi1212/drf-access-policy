@@ -251,11 +251,11 @@ class StatementEvaluationTests(TestCase):
         else:
             mock.assert_not_called()
 
-    def assert_evaluation_order(self, statement: Statement, expected_result: bool, call_principal: bool, call_action: bool,
-                                call_condition: bool, call_condition_expression: bool):
+    def assert_evaluation_order(self, statement: Statement, expected_result: bool, call_principal: bool,
+                                call_action: bool, call_condition: bool, call_condition_expression: bool):
         mocks = self.patch_statement(statement)
         result = statement.evaluate(self.policy, self.request, self.view, self.action)
-        self.assertEquals(result, expected_result)
+        self.assertEqual(result, expected_result)
         self.assert_called(mocks["match_principal"], call_principal)
         self.assert_called(mocks["match_action"], call_action)
         self.assert_called(mocks["match_condition"], call_condition)

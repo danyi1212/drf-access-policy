@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.fields import IntegerField
@@ -103,7 +104,7 @@ class FieldAccessMixinTests(TestCase):
             "'Unable to find request in serializer context on MySerializer (required for FieldAccessMixin)'",
             str(context.exception),
         )
-        
+
     def test_policy_field_permissions_statements(self):
         class MyPolicy(AccessPolicy):
             field_permissions = {"read_only": [
@@ -143,10 +144,10 @@ class FieldAccessMixinTests(TestCase):
                         {"*"},
                     ],
                 })
-        
+
         with self.assertRaises(ValueError) as context:
             MySerializer(context={"request": self.request})
-        
+
         self.assertTrue("Invalid field permissions statement" in str(context.exception))
         self.assertTrue("set" in str(context.exception))
         self.assertTrue("AccessPolicy" in str(context.exception))

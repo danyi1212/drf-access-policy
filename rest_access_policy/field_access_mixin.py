@@ -1,3 +1,4 @@
+# pylint: disable=protected-access, not-callable
 from typing import Iterator, Type, Union, Set, Any
 
 from rest_framework.fields import Field
@@ -7,17 +8,18 @@ from rest_access_policy.access_policy import AccessPolicy
 from rest_access_policy.statements import FieldStatement
 
 
-class FieldAccessMixin(object):
+class FieldAccessMixin:
 
     def __init__(self, *args, **kwargs):
         self.serializer_context = kwargs.get("context", {})
         super().__init__(*args, **kwargs)
 
-        for attribute in self.field_permissions.keys():
+        for attribute in self.access_policy.field_permissions.keys():
             self._set_fields_attribute_from_policy(attribute, True)
 
     @property
     def access_policy(self) -> AccessPolicy:
+        """ Get serializer's access policy from Meta """
         meta = getattr(self, "Meta", None)
         access_policy: Union[AccessPolicy, Type[AccessPolicy]] = getattr(meta, "access_policy", None)
         if access_policy is None:
@@ -33,16 +35,15 @@ class FieldAccessMixin(object):
 
     @property
     def request(self) -> Request:
+        """
+        Get request from serializer context
+        """
         request = self.serializer_context.get("request")
         if not request:
             raise KeyError(f"Unable to find request in serializer context on {self.__class__.__name__} "
                            f"(required for FieldAccessMixin)")
 
         return request
-
-    @property
-    def field_permissions(self):
-        return self.access_policy.field_permissions
 
     def _get_statements(self, key: str) -> Iterator[FieldStatement]:
         return self.access_policy._get_field_statements(key)

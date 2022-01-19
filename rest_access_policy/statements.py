@@ -1,12 +1,13 @@
+# pylint: disable=missing-function-docstring, unused-argument
 import re
 from abc import ABC
 from dataclasses import dataclass
 from typing import Union, Sequence, TYPE_CHECKING, Set
 try:
-    # support for python pre 3.8
     from typing import Literal
     EffectTypeHint = Literal["allow", "deny"]
 except ImportError:
+    # support for python pre 3.8
     EffectTypeHint = str
 
 

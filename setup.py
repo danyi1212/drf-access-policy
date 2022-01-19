@@ -30,7 +30,7 @@ setup(
     url="https://github.com/rsinger86/drf-access-policy",
     license="MIT",
     keywords="django restframework drf access policy authorization declarative",
-    long_description=Path("README.md").read_text(),
+    long_description=Path("README.md").read_text(encoding="utf-8"),
     classifiers=classifiers,
     long_description_content_type="text/markdown",
     install_requires=["pyparsing", "djangorestframework"],

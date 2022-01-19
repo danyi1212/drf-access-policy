@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 from typing import Optional
 
 from django.contrib.auth.models import User, AnonymousUser
@@ -8,13 +9,13 @@ from rest_access_policy import AccessPolicy
 from rest_access_policy.field_access_mixin import FieldAccessMixin
 
 
-class FakeRequest(object):
+class FakeRequest:
     def __init__(self, user: Optional[User] = None, method: str = "GET"):
         self.user = user or AnonymousUser()
         self.method = method
 
 
-class FakeViewSet(object):
+class FakeViewSet:
     def __init__(self, action: str = "create"):
         self.action = action
 

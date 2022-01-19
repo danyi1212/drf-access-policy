@@ -1,9 +1,10 @@
+# pylint: disable=not-callable
 from typing import Type, Union
 
-from rest_access_policy import AccessPolicy
+from rest_access_policy.access_policy import AccessPolicy
 
 
-class AccessViewSetMixin(object):
+class AccessViewSetMixin:
     access_policy: Union[AccessPolicy, Type[AccessPolicy]] = None
 
     def __init__(self, *args, **kwargs):

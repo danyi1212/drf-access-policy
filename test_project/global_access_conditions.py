@@ -1,6 +1,7 @@
+# pylint: disable=unused-argument
 from rest_access_policy.utils import object_level_condition
 
-not_a_func = True
+not_a_func = True  # pylint: disable=invalid-name
 
 
 def is_a_func(request, view, action):
