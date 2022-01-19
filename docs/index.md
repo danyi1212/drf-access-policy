@@ -39,8 +39,9 @@ Key Features:
 See [migration notes](/migration_notes.html) if your policy statements combine multiple conditions into boolean expressions.
 
 ## Requirements
-
-Python 3.5+
+* Python 3.7+
+* Django 2.2+
+* Django REST Framework 3.10+
 
 ## Installation
 
