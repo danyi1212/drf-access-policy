@@ -1,97 +1,84 @@
-from typing import List
+# pylint: disable=protected-access, not-callable
+from typing import Iterator, Type, Union, Set, Any
 
+from rest_framework.fields import Field
 from rest_framework.request import Request
 
-from .access_policy import AccessPolicy
+from rest_access_policy.access_policy import AccessPolicy
+from rest_access_policy.statements import FieldStatement
 
 
-class FieldAccessMixin(object):
+class FieldAccessMixin:
+
     def __init__(self, *args, **kwargs):
         self.serializer_context = kwargs.get("context", {})
         super().__init__(*args, **kwargs)
 
-        if (
-            self.request.method
-            in [
-                "POST",
-                "PUT",
-                "PATCH",
-            ]
-            and self.field_permissions.get("read_only")
-        ):
-            self._set_read_only_fields()
+        for attribute in self.access_policy.field_permissions.keys():
+            self._set_fields_attribute_from_policy(attribute, True)
 
     @property
     def access_policy(self) -> AccessPolicy:
+        """ Get serializer's access policy from Meta """
         meta = getattr(self, "Meta", None)
+        access_policy: Union[AccessPolicy, Type[AccessPolicy]] = getattr(meta, "access_policy", None)
+        if access_policy is None:
+            raise ValueError("Must set Meta.access_policy for FieldAccessMixin")
 
-        if not meta:
-            raise Exception("Must set access_policy inside Meta for FieldAccessMixin")
+        if isinstance(access_policy, AccessPolicy):
+            return access_policy
 
-        access_policy = getattr(meta, "access_policy", None)
+        if not (isinstance(access_policy, type) and issubclass(access_policy, AccessPolicy)):
+            raise ValueError(f"{self.__class__.__name__}.Meta.access_policy must be an AccessPolicy or subclass")
 
-        if not access_policy:
-            raise Exception("Must set access_policy inside Meta for FieldAccessMixin")
-
-        return access_policy
+        return access_policy()
 
     @property
     def request(self) -> Request:
+        """
+        Get request from serializer context
+        """
         request = self.serializer_context.get("request")
-
         if not request:
-            raise Exception("Must pass context with request to FieldAccessMixin")
+            raise KeyError(f"Unable to find request in serializer context on {self.__class__.__name__} "
+                           f"(required for FieldAccessMixin)")
 
         return request
 
-    @property
-    def field_permissions(self) -> dict:
-        access_policy = self.access_policy
+    def _get_statements(self, key: str) -> Iterator[FieldStatement]:
+        return self.access_policy._get_field_statements(key)
 
-        field_permissions = getattr(access_policy, "field_permissions", {})
+    def _get_fields_from_statements(self, key: str) -> Set[Field]:
+        """
+        Get all fields that should be modified
+        :param key: Fields matching specific key (aka. serializer field attribute)
+        :return: Set of fields matching the statements
+        """
+        grouped_fields = {"deny": set(), "allow": set(), "default": set()}
+        for statement in self._get_statements(key):
+            if statement.match_principal(self.access_policy, self.request, None, ""):
+                effect = statement.effect or "default"
+                grouped_fields[effect] = grouped_fields[effect].union(statement.get_fields())
 
-        if not isinstance(field_permissions, dict):
-            raise Exception("Field permissions must be set on access_policy for FieldAccessMixin")
+        if "*" in grouped_fields["deny"]:
+            return set(self.fields.values())
+        if "*" in grouped_fields["allow"]:
+            grouped_fields["default"] = set()
+        if "*" in grouped_fields["default"]:
+            grouped_fields["default"] = set(self.fields.keys())
 
-        return field_permissions
+        matched_fields = {*grouped_fields["deny"], *(grouped_fields["default"] - grouped_fields["allow"])}
+        return {
+            field for name, field in self.fields.items()
+            if name in matched_fields
+        }
 
-    def _set_read_only_fields(self):
-        read_only_statements = self._validate_and_clean_statements(
-            self.field_permissions["read_only"]
-        )
-
-        statements_matching_principal = self.access_policy._get_statements_matching_principal(
-            request=self.request, statements=read_only_statements
-        )
-
-        for statement in statements_matching_principal:
-            if "*" in statement["fields"]:
-                for field in self.fields.values():
-                    field.read_only = True
-                break
-            else:
-                for field in statement["fields"]:
-                    if self.fields.get(field, None) is not None:
-                        self.fields[field].read_only = True
-
-    def _validate_and_clean_statements(self, statements: List[dict]) -> List[dict]:
-        for statement in statements:
-            if not isinstance(statement, dict):
-                raise Exception("Must pass a dict as statement")
-
-            if len(statement) == 0:
-                raise Exception("Cannot pass empty dict as statement")
-
-            if statement.get("principal", None) is None:
-                raise Exception("Must pass principal in statement")
-
-            if statement.get("fields", None) is None:
-                raise Exception("Must pass fields in statement")
-
-            if isinstance(statement["principal"], str):
-                statement["principal"] = [statement["principal"]]
-
-            if isinstance(statement["fields"], str):
-                statement["fields"] = [statement["fields"]]
-
-        return statements
+    def _set_fields_attribute_from_policy(self, attribute: str, value: Any) -> None:
+        """
+        Set attribute to value for all fields matching policy statements
+        :param attribute: Field's attribute to modify
+        :param value: The value to set for matching fields
+        """
+        for field in self._get_fields_from_statements(attribute):
+            if hasattr(field, attribute):
+                setattr(field, attribute, value)

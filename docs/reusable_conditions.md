@@ -1,6 +1,7 @@
-# Re-Usable Conditions/Permissions
+# Re-Usable Conditions / Permissions
 
-If you'd like to re-use custom conditions across policies, you can define them globally in a module and point to it via the setttings. You can also provide a `List` of paths to check multiple files.
+You can re-use conditions across policies by defining them globally in a module and point to it via the settings.
+In this setting you can also provide a `List` of paths to search in multiple modules. 
 
 ```python
 # in your project settings.py
@@ -20,4 +21,6 @@ def user_must_be(self, request, view, action, field: str) -> bool:
     return getattr(account, field) == request.user
 ```
 
-The policy class will first check its own methods for what's been defined in the `condition` property. If nothing is found, it will check the module defined in the `reusable_conditions` setting.
+The searching for condition methods specified in the `condition` or `condition_expression` properties is done first for 
+methods with **matching names on the policy**, and then by the order of modules defined in the `reusable_conditions`
+setting.

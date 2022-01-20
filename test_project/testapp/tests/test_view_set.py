@@ -1,85 +1,142 @@
+from functools import wraps
+from typing import List
+
 from django.contrib.auth.models import Group, User
+from django.test import override_settings
+from django.utils import timezone
+from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from test_project.testapp.models import UserAccount
+from test_project.testapp.models import Article
 
 
-class UserAccountTestCase(APITestCase):
-    def setUp(self):
-        UserAccount.objects.all().delete()
-        User.objects.all().delete()
-        Group.objects.all().delete()
+def for_each_view():
+    def decorator(test_func):
+        @wraps(test_func)
+        def wrapper(self: "ArticleViewSetTests"):
+            for view_path in self.views_path:
+                with self.subTest(view=view_path):
+                    test_func(self, view_path)
 
-    def test_create_allowed(self):
-        admin_group = Group.objects.create(name="admin")
-        admin_user = User.objects.create()
-        admin_user.groups.add(admin_group)
-        self.client.force_authenticate(user=admin_user)
+        return wrapper
 
-        for name in ["account-mixin-test-list", "account-list"]:
-            url = reverse(name)
+    return decorator
 
-            response = self.client.post(
-                url,
-                {"username": "fred", "first_name": "Fred", "last_name": "Rogers"},
-                format="json",
-            )
 
-            self.assertEqual(response.status_code, 201)
+@override_settings(DRF_ACCESS_POLICY={"reusable_conditions": "test_project.global_access_conditions"})
+class ArticleViewSetTests(APITestCase):
+    views_path = ["testapp:articles-mixin", "testapp:articles-no-mixin"]
 
-    def test_retrieve_denied(self):
-        account = UserAccount.objects.create(
-            username="fred", first_name="Fred", last_name="Rogers"
+    @classmethod
+    def setUpTestData(cls):
+        cls.editors_group = Group.objects.create(name="editors")
+        cls.user = User.objects.create(username="test_user")
+        cls.editor = User.objects.create(username="test_editor")
+        cls.editor.groups.add(cls.editors_group)
+        cls.admin = User.objects.create(username="test_admin", is_superuser=True)
+        cls.admin.groups.add(cls.editors_group)
+
+        cls.articles: List[Article] = Article.objects.bulk_create(
+            Article(author=user, title=f"Article #{user.pk}{i}", body="Hello World!")
+            for i in range(10)
+            for user in [cls.user, cls.editor, cls.admin]
         )
-        banned_group = Group.objects.create(name="banned")
-        banned_user = User.objects.create()
-        banned_user.groups.add(banned_group)
-        self.client.force_authenticate(user=banned_user)
+        Article.objects.filter(author=cls.editor).update(published_by=cls.editor, published_at=timezone.now())
 
-        url = reverse("account-detail", args=[account.id])
+    @for_each_view()
+    def test_create_as_anonymous(self, view_path):
+        response = self.client.post(reverse(f"{view_path}-list"), {})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.data)
 
-        response = self.client.get(url, format="json")
-        self.assertEqual(response.status_code, 403)
+    @for_each_view()
+    def test_list_as_anonymous(self, view_path):
+        # Tests scope_query
+        response = self.client.get(reverse(f"{view_path}-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
+        self.assertEqual(len(response.data), 10)
 
-    def test_set_password_should_be_allowed(self):
-        account = UserAccount.objects.create(
-            username="fred", first_name="Fred", last_name="Rogers"
-        )
-        regular_users_group = Group.objects.create(name="regular_users")
-        user = User.objects.create()
-        user.groups.add(regular_users_group)
-        self.client.force_authenticate(user=user)
+    @for_each_view()
+    def test_list_as_user(self, view_path):
+        # Tests scope_query
+        self.client.force_login(self.user)
+        response = self.client.get(reverse(f"{view_path}-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
+        self.assertEqual(len(response.data), 20)
 
-        url = reverse("account-set-password", args=[account.id])
+    @for_each_view()
+    def test_list_as_editor(self, view_path):
+        # Tests scope_query
+        self.client.force_login(self.editor)
+        response = self.client.get(reverse(f"{view_path}-list"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
+        self.assertEqual(len(response.data), 30)
 
-        response = self.client.post(url, format="json")
-        self.assertEqual(response.status_code, 200)
+    @for_each_view()
+    def test_edit_as_user(self, view_path):
+        self.client.force_login(self.user)
+        response = self.client.patch(reverse(f"{view_path}-detail", kwargs=dict(pk=2)), {"title": "Hi mom."})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response)
 
-    def test_set_password_should_be_denied(self):
-        account = UserAccount.objects.create(
-            username="fred", first_name="Fred", last_name="Rogers"
-        )
-        user = User.objects.create()
-        self.client.force_authenticate(user=user)
+    @for_each_view()
+    def test_edit_as_author(self, view_path):
+        self.client.force_login(self.user)
+        response = self.client.patch(reverse(f"{view_path}-detail", kwargs=dict(pk=1)), {"title": "Hi mom."})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response)
 
-        url = reverse("account-set-password", args=[account.id])
-        response = self.client.post(url, format="json")
-        self.assertEqual(response.status_code, 403)
+    @for_each_view()
+    def test_edit_as_editor(self, view_path):
+        self.client.force_login(self.editor)
+        response = self.client.patch(reverse(f"{view_path}-detail", kwargs=dict(pk=1)), {"title": "Hi mom."})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response.data)
 
-    def test_partial_update_should_not_update_status_for_dev_group(self):
-        account = UserAccount.objects.create(
-            username="fred", first_name="Fred", last_name="Rogers"
-        )
-        dev_users_group = Group.objects.create(name="dev")
-        user = User.objects.create()
-        user.groups.add(dev_users_group)
-        self.client.force_authenticate(user=user)
+    @for_each_view()
+    def test_publish_as_user(self, view_path):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse(f"{view_path}-publish", kwargs=dict(pk=2)), {})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN, msg=response)
 
-        url = reverse("account-detail", args=[account.id])
+    @for_each_view()
+    def test_publish_as_author(self, view_path):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse(f"{view_path}-publish", kwargs=dict(pk=1)), {})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response)
 
-        response = self.client.patch(
-            url, data={"last_name": "Mercury", "status": "inactive"}, format="json"
-        )
-        self.assertEqual(response.data["last_name"], "Mercury")
-        self.assertEqual(response.data["status"], "active")
+    @for_each_view()
+    def test_publish_as_editor(self, view_path):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse(f"{view_path}-publish", kwargs=dict(pk=1)), {})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, msg=response.data)
+
+    @for_each_view()
+    def test_create_article(self, view_path):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse(f"{view_path}-list"), {
+            "title": "My Article",
+            "body": "Hello World!",
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.data)
+
+    @for_each_view()
+    def test_create_article_read_only_fields(self, view_path):
+        self.client.force_login(self.editor)
+        response = self.client.post(reverse(f"{view_path}-list"), {
+            "title": "My Article",
+            "body": "Hello World!",
+            "published_by": self.user.pk,
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.data)
+        self.assertNotEqual(response.data.get("published_by"), self.user.pk)
+        self.assertEqual(response.data.get("published_by"), None)
+
+    @for_each_view()
+    def test_create_article_read_only_fields_admin(self, view_path):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse(f"{view_path}-list"), {
+            "title": "My Article",
+            "body": "Hello World!",
+            "published_by": self.user.pk,
+        }, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, msg=response.data)
+        self.assertEqual(response.data.get("published_by"), self.user.pk)
+        self.assertNotEqual(response.data.get("published_by"), None)

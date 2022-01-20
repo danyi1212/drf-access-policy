@@ -1,18 +1,15 @@
+from django.contrib.auth import get_user_model
 from django.db import models
 
 
-class UserAccount(models.Model):
-    username = models.CharField(max_length=100)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    password = models.CharField(max_length=200)
-    email = models.EmailField(null=True)
-    password_updated_at = models.DateTimeField(null=True)
-    joined_at = models.DateTimeField(null=True)
-    has_trial = models.BooleanField(default=False)
+class Article(models.Model):
+    title = models.CharField(max_length=64)
+    body = models.CharField(max_length=256)
 
-    status = models.CharField(
-        default="active",
-        max_length=30,
-        choices=(("active", "Active"), ("banned", "Banned"), ("inactive", "Inactive")),
-    )
+    author = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name="articles")
+    published_at = models.DateTimeField(null=True, default=None)
+    published_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, related_name="published_articles",
+                                     null=True, default=None)
+
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)

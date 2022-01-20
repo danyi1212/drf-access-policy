@@ -1,3 +1,5 @@
-from .exceptions import AccessPolicyException
-from .access_policy import AccessPolicy
-from .access_view_set_mixin import AccessViewSetMixin
+from rest_access_policy.exceptions import AccessPolicyException
+from rest_access_policy.access_policy import AccessPolicy
+from rest_access_policy.statements import Statement, FieldStatement
+from rest_access_policy.access_view_set_mixin import AccessViewSetMixin
+from rest_access_policy.field_access_mixin import FieldAccessMixin
