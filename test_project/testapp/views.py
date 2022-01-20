@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action, api_view, permission_classes
